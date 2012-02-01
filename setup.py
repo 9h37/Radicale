@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 #
 # This file is part of Radicale Server - Calendar Server
-# Copyright © 2009-2011 Guillaume Ayoub
+# Copyright © 2009-2012 Guillaume Ayoub
 #
 # This library is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -58,7 +58,7 @@ setup(
     packages=["radicale", "radicale.acl", "radicale.storage"],
     provides=["radicale"],
     scripts=["bin/radicale"],
-    keywords=["calendar", "CalDAV"],
+    keywords=["calendar", "addressbook", "CalDAV", "CardDAV"],
     classifiers=[
         "Development Status :: 4 - Beta",
         "Environment :: Console",

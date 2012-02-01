@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 #
 # This file is part of Radicale Server - Calendar Server
-# Copyright © 2008-2011 Guillaume Ayoub
+# Copyright © 2008-2012 Guillaume Ayoub
 # Copyright © 2008 Nicolas Kandel
 # Copyright © 2008 Pascal Halter
 #
@@ -65,9 +65,9 @@ INITIAL_CONFIG = {
     "storage": {
         "type": "filesystem",
         "filesystem_folder":
-            os.path.expanduser("~/.config/radicale/calendars"),
+            os.path.expanduser("~/.config/radicale/collections"),
         "git_folder":
-            os.path.expanduser("~/.config/radicale/calendars")},
+            os.path.expanduser("~/.config/radicale/collections")},
     "logging": {
         "config": "/etc/radicale/logging",
         "debug": "False",

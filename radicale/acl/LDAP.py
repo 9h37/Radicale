@@ -2,7 +2,7 @@
 #
 # This file is part of Radicale Server - Calendar Server
 # Copyright © 2011 Corentin Le Bail
-# Copyright © 2011 Guillaume Ayoub
+# Copyright © 2011-2012 Guillaume Ayoub
 #
 # This library is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -39,9 +39,17 @@ SCOPE = getattr(ldap, "SCOPE_%s" % config.get("acl", "ldap_scope").upper())
 
 def has_right(owner, user, password):
     """Check if ``user``/``password`` couple is valid."""
+    global CONNEXION
+
     if not user or (owner not in acl.PRIVATE_USERS and user != owner):
         # No user given, or owner is not private and is not user, forbidden
         return False
+
+    try:
+        CONNEXION.whoami_s()
+    except:
+        log.LOGGER.debug("Reconnecting the LDAP server")
+        CONNEXION = ldap.initialize(config.get("acl", "ldap_url"))
 
     if BINDDN and PASSWORD:
         log.LOGGER.debug("Initial LDAP bind as %s" % BINDDN)
