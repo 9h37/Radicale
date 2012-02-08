@@ -33,8 +33,8 @@ from django_radicale import settings
 setup_environ(settings)
 
 from django_radicale.glue.models import *
-from radicale.icalendar import Calendar
-from radicale.icalendar import Event
+from django_radicale.icalendar import Calendar
+from django_radicale.icalendar import Event
 
 
 class Collection(ical.Collection):
@@ -101,7 +101,7 @@ class Collection(ical.Collection):
 
     @classmethod
     def children(cls, path):
-        yield []
+        return []
 
     @classmethod
     def is_collection(cls, path):
