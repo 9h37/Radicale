@@ -35,6 +35,7 @@ setup_environ(settings)
 from django_radicale.glue.models import *
 from django_radicale.icalendar import Calendar
 from django_radicale.icalendar import Event
+from django_radicale.icalendar import vDatetime, vDDDTypes
 
 
 class Collection(ical.Collection):
@@ -47,12 +48,12 @@ class Collection(ical.Collection):
         return calendar
 
     def save(self, text):
-        ical = Calendar.from_string(text)
+        ical = Calendar.from_ical(text)
 
         try:
             user = User.objects.get(username = self.owner)
         except User.DoesNotExist:
-            return
+            raise User.DoesNotExist
 
         if self._model is not None:
             calendar = self._model
@@ -61,24 +62,23 @@ class Collection(ical.Collection):
             calendar.owner = user
 
         calendar.path = self.path
-        calendar.prodid = ical.prodid
+        calendar.prodid = ical['prodid']
 
         calendar.save()
 
-        for icalevent in ical.walk():
+        for icalevent in ical.walk('VEVENT'):
             try:
-                event = DjangoEvent.objects.get(uid = icalevent.uid)
-            except DoesNotExist:
+                event = DjangoEvent.objects.get(uid = icalevent['uid'])
+            except DjangoEvent.DoesNotExist:
                 event = DjangoEvent()
                 event.creator = user
-                event.created = datetime.fromtimestamp(time.time())
 
-            event.uid = icalevent.uid
+            event.uid = icalevent['uid']
             event.calendar = calendar
-            event.start = icalevent.dtstart
-            event.end = icalevent.dtend
-            event.title = icalevent.summary
-            event.description = icalevent.description
+            event.start = vDatetime.from_ical(icalevent['dtstart'].to_ical())
+            event.end = vDatetime.from_ical(icalevent['dtend'].to_ical())
+            event.title = icalevent['summary']
+            event.description = icalevent['description']
 
             event.save()
 
