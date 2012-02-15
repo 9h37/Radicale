@@ -6,6 +6,7 @@ class DjangoCalendar(models.Model):
     owner = models.ForeignKey(User, null=True)
     path = models.CharField(max_length=250)
     prodid = models.CharField(max_length=250)
+    last_modified = models.DateTimeField(auto_now=True)
 
     def to_ical(self):
         ical = Calendar()
@@ -16,6 +17,7 @@ class DjangoCalendar(models.Model):
             event = Event()
             event.add('summary', e.title)
             event.add('description', e.description)
+            event.add('uid', e.uid)
 
             event['dtstart'] = vDatetime(e.start)
             event['dtend'] = vDatetime(e.end)
@@ -26,7 +28,7 @@ class DjangoCalendar(models.Model):
         return ical
 
 class DjangoEvent(models.Model):
-    uid = models.CharField(max_length=15)
+    uid = models.CharField(max_length=100)
     start = models.DateTimeField()
     end = models.DateTimeField()
     created = models.DateTimeField(auto_now_add=True)

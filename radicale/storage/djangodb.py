@@ -21,6 +21,7 @@ Django/SQL storage backend.
 
 """
 
+import os
 import time
 from datetime import datetime
 from contextlib import contextmanager
@@ -40,9 +41,13 @@ from django_radicale.icalendar import vDatetime, vDDDTypes
 
 class Collection(ical.Collection):
     @property
+    def _path(self):
+        return os.path.dirname(self.path)
+
+    @property
     def _model(self):
         try:
-            calendar = DjangoCalendar.objects.get(path = self.path)
+            calendar = DjangoCalendar.objects.get(path = self._path)
         except DjangoCalendar.DoesNotExist:
             return None
         return calendar
@@ -61,7 +66,7 @@ class Collection(ical.Collection):
             calendar = DjangoCalendar()
             calendar.owner = user
 
-        calendar.path = self.path
+        calendar.path = self._path
         calendar.prodid = ical['prodid']
 
         calendar.save()
@@ -105,11 +110,17 @@ class Collection(ical.Collection):
 
     @classmethod
     def is_collection(cls, path):
+        print path
         return False # No collection, so always return false.
 
     @classmethod
     def is_item(cls, path):
         return True # No collection, so always return true.
+
+    @property
+    def last_modified(self):
+        modification_time = self._model.last_modified
+        return time.strftime("%a, %d, %b, %Y %H:%M:%S +0000", modification_time)
 
     @property
     @contextmanager

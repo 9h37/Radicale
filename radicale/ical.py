@@ -175,6 +175,7 @@ class Collection(object):
         the slash as the folder delimiter, with no leading nor trailing slash.
 
         """
+        print path
         self.encoding = "utf-8"
         split_path = path.split("/")
         self.path = path if path != '.' else ''
