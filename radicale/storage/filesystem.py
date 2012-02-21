@@ -23,6 +23,7 @@ Filesystem storage backend.
 
 import codecs
 import os
+import posixpath
 import json
 import time
 from contextlib import contextmanager
@@ -76,11 +77,11 @@ class Collection(ical.Collection):
 
     @classmethod
     def children(cls, path):
-        rel_path = path.replace("/", os.sep)
-        abs_path = os.path.join(FOLDER, rel_path)
-        for filename in next(os.walk(abs_path))[2]:
-            rel_filename = os.path.join(rel_path, filename)
-            if cls.is_collection(rel_filename):
+        abs_path = os.path.join(FOLDER, path.replace("/", os.sep))
+        _, directories, files = next(os.walk(abs_path))
+        for filename in directories + files:
+            rel_filename = posixpath.join(path, filename)
+            if cls.is_collection(rel_filename) or cls.is_item(rel_filename):
                 yield cls(rel_filename)
 
     @classmethod
@@ -91,7 +92,7 @@ class Collection(ical.Collection):
     @classmethod
     def is_item(cls, path):
         abs_path = os.path.join(FOLDER, path.replace("/", os.sep))
-        return os.path.isfile(abs_path)
+        return os.path.isfile(abs_path) and not abs_path.endswith(".props")
 
     @property
     def last_modified(self):
