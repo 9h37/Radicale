@@ -13,11 +13,15 @@ class DjangoCalendar(models.Model):
         ical.add('prodid', self.prodid)
         ical.add('version', '2.0')
 
+
         for e in DjangoEvent.objects.filter(calendar = self):
             event = Event()
             event.add('summary', e.title)
             event.add('description', e.description)
             event.add('uid', e.uid)
+
+            radicale_name = e.path.strip("/").split("/")[-1]
+            event.add('x-radicale-name', radicale_name)
 
             event['dtstart'] = vDatetime(e.start)
             event['dtend'] = vDatetime(e.end)
