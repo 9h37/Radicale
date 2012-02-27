@@ -90,8 +90,20 @@ class Collection(ical.Collection):
 
             event.save()
 
+    def remove(self, name):
+        """Delete the event ``name`` from the database."""
+
+        try:
+            event = DjangoEvent.objects.get (path__endswith=name)
+        except DjangoEvent.DoesNotExist:
+            pass
+        finally:
+            event.delete()
+
+        super (Collection, self).remove (name)
+
     def delete(self):
-        """Delete entry in the database."""
+        """Delete calendar in the database."""
         if self.model is not None:
             self.model.delete()
 
