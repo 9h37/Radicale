@@ -34,41 +34,42 @@ from django_radicale import settings
 setup_environ(settings)
 
 from django_radicale.glue.models import *
-from django_radicale.icalendar import Calendar
-from django_radicale.icalendar import Event
-from django_radicale.icalendar import vDatetime, vDDDTypes
+from icalendar import Calendar as iCalendar
+from icalendar import Event as iEvent
+from icalendar import vDatetime, vDDDTypes
 
 
 class Collection(ical.Collection):
     @property
-    def _path(self):
-        return os.path.dirname(self.path)
+    def model(self):
+        """Return the given django model for ``path``."""
 
-    @property
-    def _model(self):
-        try:
-            calendar = DjangoCalendar.objects.get(path = self._path)
-        except DjangoCalendar.DoesNotExist:
-            return None
-        return calendar
+        if Collection.is_leaf(self.path):
+            try:
+                return DjangoCalendar.objects.get(path=self.path)
+            except DjangoCalendar.DoesNotExist:
+                return None
+        else:
+            try:
+                return DjangoEvent.objects.get(path=self.path)
+            except DjangoEvent.DoesNotExist:
+                return None
 
     def save(self, text):
-        ical = Calendar.from_ical(text)
+        """Write ``text`` into the database."""
+
+        user = User.objects.get(username = self.owner)
 
         try:
-            user = User.objects.get(username = self.owner)
-        except User.DoesNotExist:
-            raise User.DoesNotExist
-
-        if self._model is not None:
-            calendar = self._model
-        else:
+            calendar = DjangoCalendar.objects.get(path=self.path)
+        except DjangoCalendar.DoesNotExist:
             calendar = DjangoCalendar()
             calendar.owner = user
 
-        calendar.path = self._path
-        calendar.prodid = ical['prodid']
-
+        ical = iCalendar.from_ical(text)
+        calendar.path    = self.path
+        calendar.prodid  = ical['prodid']
+        calendar.version = ical['version']
         calendar.save()
 
         for icalevent in ical.walk('VEVENT'):
@@ -78,49 +79,71 @@ class Collection(ical.Collection):
                 event = DjangoEvent()
                 event.creator = user
 
-            event.uid = icalevent['uid']
-            event.calendar = calendar
-            event.start = vDatetime.from_ical(icalevent['dtstart'].to_ical())
-            event.end = vDatetime.from_ical(icalevent['dtend'].to_ical())
-            event.title = icalevent['summary']
-            event.description = icalevent['description']
+            event.uid         = icalevent['uid']
+            event.path        = self.path + "/" + icalevent['X-RADICALE-NAME']
+            event.calendar    = calendar
+            event.start       = vDatetime.from_ical(icalevent['dtstart'].to_ical())
+            event.end         = vDatetime.from_ical(icalevent['dtend'].to_ical())
+            event.title       = icalevent['summary']
+            if 'description' in icalevent:
+                event.description = icalevent['description']
 
             event.save()
 
     def delete(self):
-        if self._model is not None:
-            calendar = self._model
-
-            for event in Event.objects.filter(calendar = calendar):
-                event.delete()
-
-            calendar.delete()
+        """Delete entry in the database."""
+        if self.model is not None:
+            self.model.delete()
 
     @property
     def text(self):
-        if self._model is not None:
-            ical = self._model.to_ical()
+        if self.model is not None:
+            ical = self.model.to_ical()
             return ical.to_ical()
         else:
             return ""
 
     @classmethod
     def children(cls, path):
-        return []
+        """Return every events contained in path ``path``."""
+        if cls.is_node(path) or cls.is_leaf(path):
+            events = DjangoEvent.objects.filter(path=path)
+            for e in events:
+                yield cls(e.path)
 
     @classmethod
-    def is_collection(cls, path):
-        print path
-        return False # No collection, so always return false.
+    def is_node(cls, path):
+        """
+            Check if ``path`` is a collection of calendars.
+            Equivalent to SQL query :
+                SELECT * FROM calendar WHERE path LIKE "path%"
+        """
+        try:
+            DjangoCalendar.objects.get(path__startswith=path)
+        except DjangoCalendar.DoesNotExist:
+            return False
+
+        return True
 
     @classmethod
-    def is_item(cls, path):
-        return True # No collection, so always return true.
+    def is_leaf(cls, path):
+        """
+            Check if ``path`` is a calendar.
+            Equivalent to SQL query :
+                SELECT * FROM calendar WHERE path = path
+        """
+
+        try:
+            DjangoCalendar.objects.get(path=path)
+        except DjangoCalendar.DoesNotExist:
+            return False
+
+        return True
 
     @property
     def last_modified(self):
-        modification_time = self._model.last_modified
-        return time.strftime("%a, %d, %b, %Y %H:%M:%S +0000", modification_time)
+        """Return the last modified property of a calendar, create it if it doesn't exist."""
+        return time.strftime("%a, %d, %b, %Y %H:%M:%S +0000", self.model.last_modified.timetuple())
 
     @property
     @contextmanager

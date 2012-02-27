@@ -16,8 +16,35 @@ import re
 import textwrap
 from types import TupleType, ListType
 from icalendar.caselessdict import CaselessDict
-
+import pytz
 SequenceTypes = [TupleType, ListType]
+
+
+def timezone_from_string(timezone):
+    """ Return a DstTzInfo object from a timezone string using the pytz module.
+    Timezones other than those defined in the Olson database are not supported.
+
+    >>> from icalendar.parser import timezone_from_string
+
+    Testing an existent zone:
+    >>> timezone_from_string("Europe/Vienna")
+    <DstTzInfo 'Europe/Vienna' ...
+
+    Testing an inexistend zone. In the Styrian dialect, Tripstrül describes an
+    imaginative place somewhere in nowhere, far away.
+    It's not defined in the Olson database.
+    >>> pytz.timezone('Tripstrul')
+    Traceback (most recent call last):
+    ...
+    raise UnknownTimeZoneError(zone)
+    UnknownTimeZoneError: 'Tripstrul'
+
+    """
+    try:
+        timezone = pytz.timezone(str(timezone))
+    except pytz.UnknownTimeZoneError:
+        timezone = None
+    return timezone
 
 
 def foldline(text, lenght=75, newline='\r\n'):
@@ -401,7 +428,7 @@ class Contentline(str):
     >>> c = Contentline('key;param="pValue":value', strict=True)
     >>> c.parts()
     ('key', Parameters({'PARAM': 'pValue'}), 'value')
-    
+
     """
 
     def __new__(cls, st, strict=False):
@@ -455,7 +482,9 @@ class Contentline(str):
             raise ValueError, "Content line could not be parsed into parts: %r: %s" % (self, e)
 
     def from_ical(st, strict=False):
-        "Unfolds the content lines in an iCalendar into long content lines"
+        """ Unfolds the content lines in an iCalendar into long content lines.
+
+        """
         try:
             # a fold is carriage return followed by either a space or a tab
             return Contentline(FOLD.sub('', st), strict=strict)
@@ -464,7 +493,10 @@ class Contentline(str):
     from_ical = staticmethod(from_ical)
 
     def to_ical(self):
-        "Long content lines are folded so they are less than 75 characters wide"
+        """ Long content lines are folded so they are less than 75 characters
+        wide.
+
+        """
         return foldline(self, newline='\r\n')
 
 

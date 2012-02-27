@@ -1,6 +1,6 @@
 from django.db import models
 from django.contrib.auth.models import User
-from django_radicale.icalendar import Calendar, Event, vDatetime
+from icalendar import Calendar, Event, vDatetime
 
 class DjangoCalendar(models.Model):
     owner = models.ForeignKey(User, null=True)
@@ -29,6 +29,7 @@ class DjangoCalendar(models.Model):
 
 class DjangoEvent(models.Model):
     uid = models.CharField(max_length=100)
+    path = models.CharField(max_length=250)
     start = models.DateTimeField()
     end = models.DateTimeField()
     created = models.DateTimeField(auto_now_add=True)

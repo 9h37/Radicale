@@ -16,7 +16,7 @@ SequenceTypes = (ListType, TupleType)
 # from this package
 from icalendar.caselessdict import CaselessDict
 from icalendar.parser import Contentlines, Contentline, Parameters
-from icalendar.parser import q_split, q_join
+from icalendar.parser import q_split, q_join, timezone_from_string
 from icalendar.prop import TypesFactory, vText
 
 
@@ -24,9 +24,8 @@ from icalendar.prop import TypesFactory, vText
 # The component factory
 
 class ComponentFactory(CaselessDict):
-    """
-    All components defined in rfc 2445 are registered in this factory class. To
-    get a component you can use it like this.
+    """ All components defined in rfc 2445 are registered in this factory 
+    class. To get a component you can use it like this.
 
     >>> factory = ComponentFactory()
     >>> component = factory['VEVENT']
@@ -240,6 +239,9 @@ class Component(CaselessDict):
                 self.set(name, [oldval, value], encode=0)
         else:
             self.set(name, value, encode)
+        if getattr(value, 'tzinfo', False):
+            timezone = timezone_from_string(value.tzinfo)
+            self[name].params.update({'TZID': str(timezone)})
 
 
     def _decode(self, name, value):
@@ -377,7 +379,11 @@ class Component(CaselessDict):
                 factory = types_factory.for_property(name)
                 component = stack[-1]
                 try:
-                    vals = factory(factory.from_ical(vals))
+                    if name in ('DTSTART', 'DTEND') and 'TZID' in params: # TODO: add DUE, FREEBUSY :call <SNR>31_LustyJugglerKeyPressed('ENTER')
+                        vals = factory(factory.from_ical(vals, params['TZID']))
+                        print vals.to_ical()
+                    else:
+                        vals = factory(factory.from_ical(vals))
                 except ValueError:
                     if not component.ignore_exceptions:
                         raise
