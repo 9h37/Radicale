@@ -285,17 +285,16 @@ class Application(object):
             item = collection.get_item(
                 xmlutils.name_from_path(environ["PATH_INFO"], collection))
 
-        # Evolution bug workaround
-        etag = environ.get("HTTP_IF_MATCH", item.etag).replace("\\", "")
-        if item and etag == item.etag:
-            # No ETag precondition or precondition verified, delete item
-            answer = xmlutils.delete(environ["PATH_INFO"], collection)
-            status = client.NO_CONTENT
-        else:
-            # No item or ETag precondition not verified, do not delete item
-            answer = None
-            status = client.PRECONDITION_FAILED
-        return status, {}, answer
+        if item:
+            # Evolution bug workaround
+            etag = environ.get("HTTP_IF_MATCH", item.etag).replace("\\", "")
+            if etag == item.etag:
+                # No ETag precondition or precondition verified, delete item
+                answer = xmlutils.delete(environ["PATH_INFO"], collection)
+                return client.OK, {}, answer
+
+        # No item or ETag precondition not verified, do not delete item
+        return client.PRECONDITION_FAILED, {}, None
 
     def get(self, environ, collections, content, user):
         """Manage GET request.
@@ -442,7 +441,13 @@ class Application(object):
             # Case 3: Item and no Etag precondition: Force modifying item
             xmlutils.put(environ["PATH_INFO"], content, collection)
             status = client.CREATED
-            headers["ETag"] = collection.get_item(item_name).etag
+            # Try to return the etag in the header
+            # If the added item does't have the same name as the one given by
+            # the client, then there's no obvious way to generate an etag, we
+            # can safely ignore it.
+            new_item = collection.get_item(item_name)
+            if new_item:
+                headers["ETag"] = new_item.etag
         else:
             # PUT rejected in all other cases
             status = client.PRECONDITION_FAILED
